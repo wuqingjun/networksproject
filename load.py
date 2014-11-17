@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import collections
 
 FROM_MAIL_REGEX = "([A-Za-z0-9._%+-]+@enron.com).*\r\n$"
-LOC = "/Users/rcutter/Downloads/enron_mail_20110402/maildir"
+LOC = "/path/to/enron_mail_20110402/maildir"
 ENRON_MAIL_REGEX = compile(r'([A-Za-z0-9._%+-]+@enron.com)')
 
 class Employee:
