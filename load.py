@@ -4,9 +4,10 @@ from re import search, compile, findall
 from uuid import uuid4
 import networkx as nx
 import matplotlib.pyplot as plt
+import collections
 
 FROM_MAIL_REGEX = "([A-Za-z0-9._%+-]+@enron.com).*\r\n$"
-LOC = "/path/to/Downloads/enron_mail_20110402/maildir"
+LOC = "/Users/rcutter/Downloads/enron_mail_20110402/maildir"
 ENRON_MAIL_REGEX = compile(r'([A-Za-z0-9._%+-]+@enron.com)')
 
 class Employee:
@@ -88,14 +89,14 @@ def print_graph(G):
     # nodes
     nx.draw_networkx_nodes(G,pos,
                                 node_color='r',
-                                node_size=500,
+                                node_size=10,
                                 alpha=0.8)
 
     # edges
     nx.draw_networkx_edges(G,pos)
 
     # labels
-    nx.draw_networkx_labels(G,pos)
+    # nx.draw_networkx_labels(G,pos)
 
     plt.axis('off')
     plt.savefig("project.png") # save as png
@@ -159,36 +160,49 @@ def main():
     G = nx.Graph()
     m = {}
 
-    # parse each file and add from/to addresses to graph
+    # parse each file and add from/to/cc addresses to graph
     for dirpath, dnames, fnames in walk(LOC):
         for fname in fnames:
+             # extract from addr and list of to/cc addrs
             from_addr, to_addr = find_addrs(dirpath, fname)
 
+            # convert from addr to appropriate id
             if from_addr is not None:
                 from_addr_id = disambig_email_and_add(G, m, from_addr)
             else:
                 from_addr_id = None
 
-            if to_addr is not None:
-                for indiv_to_addr in to_addr:
-                    to_addr_id = disambig_email_and_add(G, m, indiv_to_addr)
+            # evaluate each to/cc addr from this sender
+            if to_addr is None: continue
 
-                    # if email had from and to address, add an edge
-                    if from_addr_id is not None and to_addr_id is not None:
-                        if from_addr_id in G.neighbors(to_addr_id):
-                            G[to_addr_id][from_addr_id]['weight'] += 1
-                        else:
-                            G.add_edge(from_addr_id, to_addr_id, weight=1)
+            for indiv_to_addr in to_addr:
+                to_addr_id = disambig_email_and_add(G, m, indiv_to_addr)
+
+                # if email had from and to address, add an edge
+                if from_addr_id is None or to_addr_id is None: continue
+
+                if from_addr_id in G.neighbors(to_addr_id):
+                    G[to_addr_id][from_addr_id]['weight'] += 1
+                else:
+                    G.add_edge(from_addr_id, to_addr_id, weight=1)
 
     # print_graph(G)
+
+    print 'components'
+    print nx.number_connected_components(G)
+    subgraphs = sorted(nx.connected_component_subgraphs(G), key = len, reverse=True)
+    print 'giant component nodes, edges'
+    print subgraphs[0].number_of_nodes(), subgraphs[0].number_of_edges()
+    print 'giant component diameter'
+    print nx.diameter(subgraphs[0])
 
     # m = collections.OrderedDict(sorted(m.items()))
     # for key, value in m.iteritems():
     #     print key, value
     #
-    print G.number_of_nodes(), G.number_of_edges()
+    # print G.number_of_nodes(), G.number_of_edges()
     # for node in G.nodes(data=True):
-    #     print node
+    #     print node, G.degree(node[0])
 
     # print G.edges(data=True)
 
